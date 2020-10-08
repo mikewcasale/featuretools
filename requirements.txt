@@ -1,10 +1,18 @@
-scipy>=0.13.3
-numpy>=1.13.3
-pandas>=0.24.1,<2.0.0,!=1.1.0,!=1.1.1
-tqdm>=4.32.0
-pyyaml>=3.12
-cloudpickle>=0.4.0
-distributed>=2.12.0
-dask[dataframe]>=2.12.0
-psutil>=5.4.8
-click>=7.0.0
+-r test-requirements.txt
+featuretools-sklearn-transformer >= 0.1.1
+codecov==2.1.8
+flake8==3.7.8
+autopep8==1.4.4
+ipython==7.16.0; python_version=='3.7'
+ipython==7.18.1; python_version>'3.7'
+isort==4.3.21
+jupyter==1.0.0
+matplotlib==3.2.2  # koalas and composeml pinned below 3.3.0
+nbconvert==6.0.6
+nbsphinx==0.7.1
+Sphinx==3.2.1
+pydata_sphinx_theme==0.4.0
+nlp_primitives>=1.0.0
+autonormalize >= 1.0.1
+pyspark >= 3.0.1
+koalas >= 1.2.0
