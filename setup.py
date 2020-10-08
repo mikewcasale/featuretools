@@ -37,6 +37,7 @@ setup(
     install_requires=open('requirements.txt').readlines(),
     python_requires='>=3.6, <4',
     extras_require=extras_require,
+    requirements=extras_require,
     keywords='feature engineering data science machine learning',
     include_package_data=True,
     entry_points={
