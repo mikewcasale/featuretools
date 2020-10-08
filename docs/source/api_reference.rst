@@ -166,8 +166,8 @@ Cumulative Transform Primitives
     CumMin
     CumMax
 
-Text Transform Primitives
-*************************
+NaturalLanguage Transform Primitives
+************************************
 .. autosummary::
    :toctree: generated/
 
@@ -225,6 +225,14 @@ Feature calculation
 
     calculate_feature_matrix
     .. approximate_features
+
+Feature visualization
+~~~~~~~~~~~~~~~~~~~~~~
+.. currentmodule:: featuretools
+.. autosummary::
+    :toctree: generated/
+
+    graph_feature
 
 Feature encoding
 ~~~~~~~~~~~~~~~~~
@@ -323,7 +331,7 @@ Relationship attributes
 
 Variable types
 ----------------
-.. currentmodule:: featuretools.variable_types
+.. currentmodule:: featuretools.variable_types.variable
 .. autosummary::
     :toctree: generated/
 
@@ -337,7 +345,7 @@ Variable types
     Categorical
     Ordinal
     Boolean
-    Text
+    NaturalLanguage
     LatLong
     ZIPCode
     IPAddress
@@ -350,6 +358,15 @@ Variable types
     SubRegionCode
     FilePath
 
+Variable Utils Methods
+----------------------
+.. currentmodule:: featuretools.variable_types.utils
+.. autosummary::
+    :toctree: generated/
+
+    find_variable_types
+    list_variable_types
+    graph_variable_types
 
 Feature Selection
 ------------------
@@ -358,3 +375,6 @@ Feature Selection
     :toctree: generated/
 
     remove_low_information_features
+    remove_highly_correlated_features
+    remove_highly_null_features
+    remove_single_value_features

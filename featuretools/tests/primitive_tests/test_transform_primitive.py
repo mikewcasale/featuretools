@@ -4,15 +4,15 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from featuretools.primitives import Age, TimeSince
+from featuretools.primitives import Age, TimeSince, Week
 
 
 def test_time_since():
     time_since = TimeSince()
     # class datetime.datetime(year, month, day[, hour[, minute[, second[, microsecond[,
-    times = [datetime(2019, 3, 1, 0, 0, 0, 1),
-             datetime(2019, 3, 1, 0, 0, 1, 0),
-             datetime(2019, 3, 1, 0, 2, 0, 0)]
+    times = pd.Series([datetime(2019, 3, 1, 0, 0, 0, 1),
+                       datetime(2019, 3, 1, 0, 0, 1, 0),
+                       datetime(2019, 3, 1, 0, 2, 0, 0)])
     cutoff_time = datetime(2019, 3, 1, 0, 0, 0, 0)
     values = time_since(array=times, time=cutoff_time)
 
@@ -34,9 +34,9 @@ def test_time_since():
     values = time_since(array=times, time=cutoff_time)
     assert(list(map(int, values)) == [0, 0, 0])
 
-    times_y = [datetime(2019, 3, 1, 0, 0, 0, 1),
-               datetime(2020, 3, 1, 0, 0, 1, 0),
-               datetime(2017, 3, 1, 0, 0, 0, 0)]
+    times_y = pd.Series([datetime(2019, 3, 1, 0, 0, 0, 1),
+                         datetime(2020, 3, 1, 0, 0, 1, 0),
+                         datetime(2017, 3, 1, 0, 0, 0, 0)])
 
     time_since = TimeSince(unit='Years')
     values = time_since(array=times_y, time=cutoff_time)
@@ -83,3 +83,14 @@ def test_age_nan():
     ages = age(dates, time=datetime(2020, 2, 26))
     correct_ages = [10.159, np.nan, 8.159]
     np.testing.assert_array_almost_equal(ages, correct_ages, decimal=3)
+
+
+def test_week_no_deprecation_message():
+    dates = [datetime(2019, 1, 3),
+             datetime(2019, 6, 17, 11, 10, 50),
+             datetime(2019, 11, 30, 19, 45, 15)
+             ]
+    with pytest.warns(None) as record:
+        week = Week()
+        week(dates).tolist()
+    assert not record

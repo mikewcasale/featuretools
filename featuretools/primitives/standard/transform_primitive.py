@@ -1,21 +1,22 @@
-import dask.dataframe as dd
+import warnings
+
 import numpy as np
-import pandas as pd
 
 from featuretools.primitives.base.transform_primitive_base import (
     TransformPrimitive
 )
 from featuretools.utils import convert_time_units
 from featuretools.utils.entity_utils import replace_latlong_nan
+from featuretools.utils.gen_utils import Library
 from featuretools.variable_types import (
     Boolean,
     DateOfBirth,
     Datetime,
     DatetimeTimeIndex,
     LatLong,
+    NaturalLanguage,
     Numeric,
     Ordinal,
-    Text,
     Variable
 )
 
@@ -31,14 +32,11 @@ class IsNull(TransformPrimitive):
     name = "is_null"
     input_types = [Variable]
     return_type = Boolean
-    dask_compatible = True
+    compatibility = [Library.PANDAS, Library.DASK, Library.KOALAS]
 
     def get_function(self):
         def isnull(array):
-            if isinstance(array, dd.Series):
-                return dd.Series.isnull(array)
-            else:
-                return pd.isnull(pd.Series(array))
+            return array.isnull()
         return isnull
 
 
@@ -53,7 +51,7 @@ class Absolute(TransformPrimitive):
     name = "absolute"
     input_types = [Numeric]
     return_type = Numeric
-    dask_compatible = True
+    compatibility = [Library.PANDAS, Library.DASK, Library.KOALAS]
 
     def get_function(self):
         return np.absolute
@@ -111,13 +109,11 @@ class Day(TransformPrimitive):
     name = "day"
     input_types = [Datetime]
     return_type = Ordinal
-    dask_compatible = True
+    compatibility = [Library.PANDAS, Library.DASK, Library.KOALAS]
 
     def get_function(self):
         def day(vals):
-            if isinstance(vals, dd.Series):
-                return vals.dt.day
-            return pd.DatetimeIndex(vals).day.values
+            return vals.dt.day
         return day
 
 
@@ -136,13 +132,11 @@ class Hour(TransformPrimitive):
     name = "hour"
     input_types = [Datetime]
     return_type = Ordinal
-    dask_compatible = True
+    compatibility = [Library.PANDAS, Library.DASK, Library.KOALAS]
 
     def get_function(self):
         def hour(vals):
-            if isinstance(vals, dd.Series):
-                return vals.dt.hour
-            return pd.DatetimeIndex(vals).hour.values
+            return vals.dt.hour
         return hour
 
 
@@ -161,13 +155,11 @@ class Second(TransformPrimitive):
     name = "second"
     input_types = [Datetime]
     return_type = Numeric
-    dask_compatible = True
+    compatibility = [Library.PANDAS, Library.DASK, Library.KOALAS]
 
     def get_function(self):
         def second(vals):
-            if isinstance(vals, dd.Series):
-                return vals.dt.second
-            return pd.DatetimeIndex(vals).second.values
+            return vals.dt.second
         return second
 
 
@@ -186,13 +178,11 @@ class Minute(TransformPrimitive):
     name = "minute"
     input_types = [Datetime]
     return_type = Numeric
-    dask_compatible = True
+    compatibility = [Library.PANDAS, Library.DASK, Library.KOALAS]
 
     def get_function(self):
         def minute(vals):
-            if isinstance(vals, dd.Series):
-                return vals.dt.minute
-            return pd.DatetimeIndex(vals).minute.values
+            return vals.dt.minute
         return minute
 
 
@@ -216,13 +206,16 @@ class Week(TransformPrimitive):
     name = "week"
     input_types = [Datetime]
     return_type = Ordinal
-    dask_compatible = True
+    compatibility = [Library.PANDAS, Library.DASK, Library.KOALAS]
 
     def get_function(self):
         def week(vals):
-            if isinstance(vals, dd.Series):
-                return vals.dt.week
-            return pd.DatetimeIndex(vals).week.values
+            warnings.filterwarnings("ignore",
+                                    message=("Series.dt.weekofyear and Series.dt.week "
+                                             "have been deprecated."),
+                                    module="featuretools"
+                                    )
+            return vals.dt.week
         return week
 
 
@@ -241,13 +234,11 @@ class Month(TransformPrimitive):
     name = "month"
     input_types = [Datetime]
     return_type = Ordinal
-    dask_compatible = True
+    compatibility = [Library.PANDAS, Library.DASK, Library.KOALAS]
 
     def get_function(self):
         def month(vals):
-            if isinstance(vals, dd.Series):
-                return vals.dt.month
-            return pd.DatetimeIndex(vals).month.values
+            return vals.dt.month
         return month
 
 
@@ -266,13 +257,11 @@ class Year(TransformPrimitive):
     name = "year"
     input_types = [Datetime]
     return_type = Ordinal
-    dask_compatible = True
+    compatibility = [Library.PANDAS, Library.DASK, Library.KOALAS]
 
     def get_function(self):
         def year(vals):
-            if isinstance(vals, dd.Series):
-                return vals.dt.year
-            return pd.DatetimeIndex(vals).year.values
+            return vals.dt.year
         return year
 
 
@@ -291,13 +280,11 @@ class IsWeekend(TransformPrimitive):
     name = "is_weekend"
     input_types = [Datetime]
     return_type = Boolean
-    dask_compatible = True
+    compatibility = [Library.PANDAS, Library.DASK, Library.KOALAS]
 
     def get_function(self):
         def is_weekend(vals):
-            if isinstance(vals, dd.Series):
-                return vals.dt.weekday > 4
-            return pd.DatetimeIndex(vals).weekday.values > 4
+            return vals.dt.weekday > 4
         return is_weekend
 
 
@@ -320,13 +307,11 @@ class Weekday(TransformPrimitive):
     name = "weekday"
     input_types = [Datetime]
     return_type = Ordinal
-    dask_compatible = True
+    compatibility = [Library.PANDAS, Library.DASK, Library.KOALAS]
 
     def get_function(self):
         def weekday(vals):
-            if isinstance(vals, dd.Series):
-                return vals.dt.weekday
-            return pd.DatetimeIndex(vals).weekday.values
+            return vals.dt.weekday
         return weekday
 
 
@@ -341,9 +326,9 @@ class NumCharacters(TransformPrimitive):
         [16, 11, 6]
     """
     name = 'num_characters'
-    input_types = [Text]
+    input_types = [NaturalLanguage]
     return_type = Numeric
-    dask_compatible = True
+    compatibility = [Library.PANDAS, Library.DASK, Library.KOALAS]
 
     def get_function(self):
         def character_counter(array):
@@ -363,9 +348,9 @@ class NumWords(TransformPrimitive):
         [4, 2, 1, 6]
     """
     name = 'num_words'
-    input_types = [Text]
+    input_types = [NaturalLanguage]
     return_type = Numeric
-    dask_compatible = True
+    compatibility = [Library.PANDAS, Library.DASK, Library.KOALAS]
 
     def get_function(self):
         def word_counter(array):
@@ -388,7 +373,7 @@ class TimeSince(TransformPrimitive):
         ...          datetime(2019, 3, 1, 0, 0, 1, 0),
         ...          datetime(2019, 3, 1, 0, 2, 0, 0)]
         >>> cutoff_time = datetime(2019, 3, 1, 0, 0, 0, 0)
-        >>> values = time_since(array=times, time=cutoff_time)
+        >>> values = time_since(times, time=cutoff_time)
         >>> list(map(int, values))
         [0, -1, -120]
 
@@ -400,23 +385,21 @@ class TimeSince(TransformPrimitive):
         ...          datetime(2019, 3, 1, 0, 0, 1, 0),
         ...          datetime(2019, 3, 1, 0, 2, 0, 0)]
         >>> cutoff_time = datetime(2019, 3, 1, 0, 0, 0, 0)
-        >>> values = time_since_nano(array=times, time=cutoff_time)
+        >>> values = time_since_nano(times, time=cutoff_time)
         >>> list(map(lambda x: int(round(x)), values))
         [-1000, -1000000000, -120000000000]
     """
     name = 'time_since'
-    input_types = [[DatetimeTimeIndex], [Datetime]]
+    input_types = [Datetime]
     return_type = Numeric
     uses_calc_time = True
-    dask_compatible = True
+    compatibility = [Library.PANDAS, Library.DASK]
 
     def __init__(self, unit="seconds"):
         self.unit = unit.lower()
 
     def get_function(self):
         def pd_time_since(array, time):
-            if isinstance(array, list):
-                array = pd.Series(array)
             return convert_time_units((time - array).dt.total_seconds(), self.unit)
         return pd_time_since
 
@@ -433,17 +416,14 @@ class IsIn(TransformPrimitive):
     name = "isin"
     input_types = [Variable]
     return_type = Boolean
-    dask_compatible = True
+    compatibility = [Library.PANDAS, Library.DASK, Library.KOALAS]
 
     def __init__(self, list_of_outputs=None):
         self.list_of_outputs = list_of_outputs
 
     def get_function(self):
         def pd_is_in(array):
-            if isinstance(array, dd.Series):
-                return array.isin(self.list_of_outputs or [])
-            else:
-                return pd.Series(array).isin(self.list_of_outputs or [])
+            return array.isin(self.list_of_outputs or [])
         return pd_is_in
 
     def generate_name(self, base_feature_names):
@@ -489,7 +469,7 @@ class Negate(TransformPrimitive):
     name = "negate"
     input_types = [Numeric]
     return_type = Numeric
-    dask_compatible = True
+    compatibility = [Library.PANDAS, Library.DASK, Library.KOALAS]
 
     def get_function(self):
         def negate(vals):
@@ -511,7 +491,7 @@ class Not(TransformPrimitive):
     name = "not"
     input_types = [Boolean]
     return_type = Boolean
-    dask_compatible = True
+    compatibility = [Library.PANDAS, Library.DASK, Library.KOALAS]
 
     def generate_name(self, base_feature_names):
         return u"NOT({})".format(base_feature_names[0])
@@ -539,7 +519,7 @@ class Percentile(TransformPrimitive):
     return_type = Numeric
 
     def get_function(self):
-        return lambda array: pd.Series(array).rank(pct=True)
+        return lambda array: array.rank(pct=True)
 
 
 class Latitude(TransformPrimitive):
@@ -561,7 +541,7 @@ class Latitude(TransformPrimitive):
         def latitude(latlong):
             if latlong.hasnans:
                 latlong = replace_latlong_nan(latlong)
-            return pd.Series(x[0] for x in latlong)
+            return latlong.map(lambda x: x[0])
         return latitude
 
 
@@ -584,7 +564,7 @@ class Longitude(TransformPrimitive):
         def longitude(latlong):
             if latlong.hasnans:
                 latlong = replace_latlong_nan(latlong)
-            return pd.Series(x[1] for x in latlong)
+            return latlong.map(lambda x: x[1])
         return longitude
 
 
@@ -679,6 +659,7 @@ class Age(TransformPrimitive):
     input_types = [DateOfBirth]
     return_type = Numeric
     uses_calc_time = True
+    compatibility = [Library.PANDAS, Library.DASK]
 
     def get_function(self):
         def age(x, time=None):

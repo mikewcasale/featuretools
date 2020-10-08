@@ -1,12 +1,15 @@
+import warnings
+
 import numpy as np
 import pandas as pd
 
-from featuretools.utils.gen_utils import camel_to_snake, find_descendents
+from featuretools.utils.gen_utils import camel_to_snake
 
 
 class ClassNameDescriptor(object):
     """Descriptor to convert a class's name from camelcase to snakecase
     """
+
     def __get__(self, instance, class_):
         return camel_to_snake(class_.__name__)
 
@@ -313,9 +316,20 @@ class Timedelta(Variable):
         return description
 
 
-class Text(Variable):
+class NaturalLanguage(Variable):
     """Represents variables that are arbitary strings"""
     _default_pandas_dtype = str
+
+class JSONDICT(Variable):
+    """Represents variables that are arbitary strings"""
+    _default_pandas_dtype = str
+
+
+class Text(NaturalLanguage):
+    def __init__(self, id, entity, name=None):
+        msg = "Text has been deprecated. Please use NaturalLanguage instead."
+        warnings.warn(msg, category=FutureWarning)
+        super(Text, self).__init__(id, entity, name)
 
 
 class PandasTypes(object):
@@ -367,6 +381,10 @@ class URL(Variable):
     """Represents a valid web url (with or without http/www)"""
     _default_pandas_dtype = str
 
+class IMGURL(Variable):
+    """Represents a valid web url (with or without http/www)"""
+    _default_pandas_dtype = str
+
 
 class PhoneNumber(Variable):
     """Represents any valid phone number.
@@ -402,11 +420,6 @@ class SubRegionCode(Categorical):
 class FilePath(Variable):
     """Represents a valid filepath, absolute or relative"""
     _default_pandas_dtype = str
-
-
-def find_variable_types():
-    return {vtype.type_string: vtype for vtype in find_descendents(Variable)
-            if vtype != Variable}
 
 
 DEFAULT_DTYPE_VALUES = {

@@ -1,5 +1,6 @@
 import copy
 import logging
+import warnings
 from collections import defaultdict
 
 import dask.dataframe as dd
@@ -11,7 +12,14 @@ import featuretools.variable_types.variable as vtypes
 from featuretools.entityset import deserialize, serialize
 from featuretools.entityset.entity import Entity
 from featuretools.entityset.relationship import Relationship, RelationshipPath
-from featuretools.utils.gen_utils import import_or_raise
+from featuretools.utils.gen_utils import import_or_none, is_instance
+from featuretools.utils.plot_utils import (
+    check_graphviz,
+    get_graphviz_format,
+    save_graph
+)
+
+ks = import_or_none('databricks.koalas')
 
 pd.options.mode.chained_assignment = None  # default='warn'
 logger = logging.getLogger('featuretools.entityset')
@@ -186,6 +194,8 @@ class EntitySet(object):
                 compression (str) : Name of the compression to use. Possible values are: {'gzip', 'bz2', 'zip', 'xz', None}.
                 profile_name (str) : Name of AWS profile to use, False to use an anonymous profile, or None.
         '''
+        if is_instance(self.entities[0].df, ks, 'DataFrame'):
+            compression = str(compression)
         serialize.write_data_description(self, path, format='csv', index=False, sep=sep, encoding=encoding, engine=engine, compression=compression, profile_name=profile_name)
         return self
 
@@ -235,8 +245,8 @@ class EntitySet(object):
                 relationship to be added.
         """
         if relationship in self.relationships:
-            logger.warning(
-                "Not adding duplicate relationship: %s", relationship)
+            warnings.warn(
+                "Not adding duplicate relationship: " + str(relationship))
             return self
 
         # _operations?
@@ -244,6 +254,9 @@ class EntitySet(object):
         # this is a new pair of entities
         child_e = relationship.child_entity
         child_v = relationship.child_variable.id
+        if child_e.index == child_v:
+            msg = "Unable to add relationship because child variable '{}' in '{}' is also its index"
+            raise ValueError(msg.format(child_v, child_e.id))
         parent_e = relationship.parent_entity
         parent_v = relationship.parent_variable.id
         if not isinstance(child_e[child_v], vtypes.Id):
@@ -669,6 +682,9 @@ class EntitySet(object):
             ti_cols = [c if c != old_ti_name else secondary_time_index for c in ti_cols]
             make_secondary_time_index = {secondary_time_index: ti_cols}
 
+        if is_instance(new_entity_df, ks, 'DataFrame'):
+            already_sorted = False
+
         self.entity_from_dataframe(
             new_entity_id,
             new_entity_df,
@@ -802,6 +818,8 @@ class EntitySet(object):
                     if isinstance(entity.df, dd.DataFrame):
                         lti.index = entity.df[entity.index].copy()
                         lti = lti.apply(lambda x: None)
+                    elif is_instance(entity.df, ks, 'DataFrame'):
+                        lti = ks.Series(index=lti.to_list()).rename(lti.name)
                     else:
                         lti[:] = None
                 entity.last_time_index = lti
@@ -824,20 +842,26 @@ class EntitySet(object):
 
                 # updated last time from all children
                 for child_e in child_entities:
+                    # TODO: Figure out if Dask code related to indexes is important for Koalas
                     if child_e.last_time_index is None:
                         continue
                     link_var = child_vars[entity.id][child_e.id].id
 
-                    if isinstance(child_e.last_time_index, dd.Series):
+                    lti_is_dask = isinstance(child_e.last_time_index, dd.Series)
+                    lti_is_koalas = is_instance(child_e.last_time_index, ks, 'Series')
+                    if lti_is_dask or lti_is_koalas:
                         to_join = child_e.df[link_var]
-                        to_join.index = child_e.df[child_e.index]
+                        if lti_is_dask:
+                            to_join.index = child_e.df[child_e.index]
 
                         lti_df = child_e.last_time_index.to_frame(name='last_time').join(
                             to_join.to_frame(name=entity.index)
                         )
-                        new_index = lti_df.index.copy()
-                        new_index.name = None
-                        lti_df.index = new_index
+
+                        if lti_is_dask:
+                            new_index = lti_df.index.copy()
+                            new_index.name = None
+                            lti_df.index = new_index
                         lti_df = lti_df.groupby(lti_df[entity.index]).agg('max')
 
                         lti_df = entity.last_time_index.to_frame(name='last_time_old').join(lti_df)
@@ -857,14 +881,20 @@ class EntitySet(object):
                         lti_df.set_index(entity.index, inplace=True)
                         lti_df = lti_df.reindex(entity.last_time_index.index)
                         lti_df['last_time_old'] = entity.last_time_index
-                    if not isinstance(lti_df, dd.DataFrame) and lti_df.empty:
+                    if not (lti_is_dask or lti_is_koalas) and lti_df.empty:
                         # Pandas errors out if it tries to do fillna and then max on an empty dataframe
                         lti_df = pd.Series()
                     else:
-                        lti_df['last_time'] = lti_df['last_time'].astype('datetime64[ns]')
-                        lti_df['last_time_old'] = lti_df['last_time_old'].astype('datetime64[ns]')
-                        lti_df = lti_df.fillna(pd.to_datetime('1800-01-01 00:00')).max(axis=1)
-                        lti_df = lti_df.replace(pd.to_datetime('1800-01-01 00:00'), pd.NaT)
+                        if lti_is_koalas:
+                            lti_df['last_time'] = ks.to_datetime(lti_df['last_time'])
+                            lti_df['last_time_old'] = ks.to_datetime(lti_df['last_time_old'])
+                            # TODO: Figure out a workaround for fillna and replace
+                            lti_df = lti_df.max(axis=1)
+                        else:
+                            lti_df['last_time'] = lti_df['last_time'].astype('datetime64[ns]')
+                            lti_df['last_time_old'] = lti_df['last_time_old'].astype('datetime64[ns]')
+                            lti_df = lti_df.fillna(pd.to_datetime('1800-01-01 00:00')).max(axis=1)
+                            lti_df = lti_df.replace(pd.to_datetime('1800-01-01 00:00'), pd.NaT)
                     # lti_df = lti_df.apply(lambda x: x.dropna().max(), axis=1)
 
                     entity.last_time_index = lti_df
@@ -905,50 +935,23 @@ class EntitySet(object):
                 Jupyter notebooks.
 
         """
-        GRAPHVIZ_ERR_MSG = ('Please install graphviz to plot entity sets.' +
-                            ' (See https://docs.featuretools.com/en/stable/getting_started/install.html#installing-graphviz for' +
-                            ' details)')
-        graphviz = import_or_raise("graphviz", GRAPHVIZ_ERR_MSG)
-        # Try rendering a dummy graph to see if a working backend is installed
-        try:
-            graphviz.Digraph().pipe()
-        except graphviz.backend.ExecutableNotFound:
-            raise RuntimeError(
-                "To plot entity sets, a graphviz backend is required.\n" +
-                "Install the backend using one of the following commands:\n" +
-                "  Mac OS: brew install graphviz\n" +
-                "  Linux (Ubuntu): sudo apt-get install graphviz\n" +
-                "  Windows: conda install python-graphviz\n" +
-                "  For more details visit: https://docs.featuretools.com/en/stable/getting_started/install.html"
-            )
-
-        if to_file:
-            # Explicitly cast to str in case a Path object was passed in
-            to_file = str(to_file)
-
-            split_path = to_file.split('.')
-            if len(split_path) < 2:
-                raise ValueError("Please use a file extension like '.pdf'" +
-                                 " so that the format can be inferred")
-
-            format = split_path[-1]
-            valid_formats = graphviz.backend.FORMATS
-            if format not in valid_formats:
-                raise ValueError("Unknown format. Make sure your format is" +
-                                 " amongst the following: %s" % valid_formats)
-        else:
-            format = None
+        graphviz = check_graphviz()
+        format_ = get_graphviz_format(graphviz=graphviz,
+                                      to_file=to_file)
 
         # Initialize a new directed graph
-        graph = graphviz.Digraph(self.id, format=format,
+        graph = graphviz.Digraph(self.id, format=format_,
                                  graph_attr={'splines': 'ortho'})
 
         # Draw entities
         for entity in self.entities:
             variables_string = '\l'.join([var.id + ' : ' + var.type_string  # noqa: W605
                                           for var in entity.variables])
-            nrows = entity.shape[0]
-            label = '{%s (%d row%s)|%s\l}' % (entity.id, nrows, 's' * (nrows > 1), variables_string)  # noqa: W605
+            if isinstance(entity.df, dd.DataFrame):  # entity is a dask entity
+                label = '{%s |%s\l}' % (entity.id, variables_string)  # noqa: W605
+            else:
+                nrows = entity.shape[0]
+                label = '{%s (%d row%s)|%s\l}' % (entity.id, nrows, 's' * (nrows > 1), variables_string)  # noqa: W605
             graph.node(entity.id, shape='record', label=label)
 
         # Draw relationships
@@ -963,10 +966,5 @@ class EntitySet(object):
             graph.edge(rel._child_entity_id, rel._parent_entity_id, xlabel=label)
 
         if to_file:
-            # Graphviz always appends the format to the file name, so we need to
-            # remove it manually to avoid file names like 'file_name.pdf.pdf'
-            offset = len(format) + 1  # Add 1 for the dot
-            output_path = to_file[:-offset]
-            graph.render(output_path, cleanup=True)
-
+            save_graph(graph, to_file, format_)
         return graph

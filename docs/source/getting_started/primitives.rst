@@ -60,7 +60,18 @@ In the example above, we use two types of primitives.
 
 **Aggregation primitives:** These primitives take related instances as an input and output a single value. They are applied across a parent-child relationship in an entity set. E.g: ``"count"``, ``"sum"``, ``"avg_time_between"``.
 
+
+.. graphviz:: graphs/agg_feat.dot
+
+
 **Transform primitives:** These primitives take one or more variables from an entity as an input and output a new variable for that entity. They are applied to a single entity. E.g: ``"hour"``, ``"time_since_previous"``, ``"absolute"``.
+
+
+.. graphviz:: graphs/trans_feat.dot
+
+
+The above graphs were generated using the :func:`graph_feature <featuretools.graph_feature>` function. These feature lineage graphs help to visually show how primitives were stacked to generate a feature.
+
 
 For a DataFrame that lists and describes each built-in primitive in Featuretools, call ``ft.list_primitives()``.  In addition, a list of all available primitives can be obtained by visiting `primitives.featurelabs.com <https://primitives.featurelabs.com/>`__.
 
@@ -101,7 +112,7 @@ Simple Custom Primitives
 .. ipython :: python
 
     from featuretools.primitives import make_agg_primitive, make_trans_primitive
-    from featuretools.variable_types import Text, Numeric
+    from featuretools.variable_types import NaturalLanguage, Numeric
 
     def absolute(column):
         return abs(column)
@@ -160,7 +171,7 @@ Next, we need to create a custom primitive from the ``word_count`` function.
 .. ipython :: python
 
     WordCount = make_trans_primitive(function=word_count,
-                                     input_types=[Text],
+                                     input_types=[NaturalLanguage],
                                      return_type=Numeric)
 
 .. ipython :: python
