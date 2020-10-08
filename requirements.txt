@@ -12,7 +12,17 @@ nbconvert==6.0.6
 nbsphinx==0.7.1
 Sphinx==3.2.1
 pydata_sphinx_theme==0.4.0
-nlp_primitives>=1.0.0
+nlp-primitives[complete] >= 1.0.0
 autonormalize >= 1.0.1
 pyspark >= 3.0.1
 koalas >= 1.2.0
+
+featuretools-tsfresh-primitives >= 0.1.0
+featuretools-update-checker >= 1.0.0
+categorical-encoding >= 0.2.0
+nlp-primitives[complete] >= 1.0.0
+vision-primitives[complete] >= 1.0.0
+autonormalize >= 1.0.0
+featuretools-sklearn-transformer >= 0.1.1
+pyspark >= 3.0.0
+koalas >= 1.1.0
