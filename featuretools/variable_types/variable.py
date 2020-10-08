@@ -381,6 +381,11 @@ class IMGURL(Variable):
     """Represents a valid web url (with or without http/www)"""
     _default_pandas_dtype = str
 
+class JSONDICT(Variable):
+    """Represents a valid web url (with or without http/www)"""
+    _default_pandas_dtype = str
+
+
 
 class PhoneNumber(Variable):
     """Represents any valid phone number.
