@@ -320,6 +320,10 @@ class NaturalLanguage(Variable):
     """Represents variables that are arbitary strings"""
     _default_pandas_dtype = str
 
+class JSONDICT(Variable):
+    """Represents variables that are arbitary strings"""
+    _default_pandas_dtype = str
+
 
 class Text(NaturalLanguage):
     def __init__(self, id, entity, name=None):
@@ -380,11 +384,6 @@ class URL(Variable):
 class IMGURL(Variable):
     """Represents a valid web url (with or without http/www)"""
     _default_pandas_dtype = str
-
-class JSONDICT(Variable):
-    """Represents a valid web url (with or without http/www)"""
-    _default_pandas_dtype = str
-
 
 
 class PhoneNumber(Variable):
